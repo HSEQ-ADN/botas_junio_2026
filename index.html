@@ -232,11 +232,10 @@
 
         // 2. ENVÍO INVISIBLE AL SERVIDOR DRIVE (BYPASS DE CORS)
         const pdfDataUri = doc.output('datauristring');
-        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbzdzuIsIk1Om5LqbGiB9G5kt--YIORScHVRppfDwfNJUH8HS27f8_9-e8ip38uUCH6iPw/exec";
+        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbw2kspVSjJC0o3xeopQA9R6aZ1CLmjYFj7VV6Od2Pzw1dYn2RZWFHk3pjhtxZ9_KZs-6A/exec";
 
         fetch(URL_GOOGLE_SCRIPT, {
             method: "POST",
-            mode: "no-cors",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ fileName: nombreArchivo, fileContent: pdfDataUri })
         })

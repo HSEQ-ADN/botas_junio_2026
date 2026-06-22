@@ -230,31 +230,31 @@
         // 1. DESCARGA FÍSICA EN EL TELÉFONO DEL TRABAJADOR
         doc.save(nombreArchivo);
 
-       // 2. ENVÍO DIRECTO Y VISIBLE AL SERVIDOR DRIVE
+       // 2. ENVÍO DIRECTO Y BLINDADO AL SERVIDOR
         const pdfDataUri = doc.output('datauristring');
         
-        // PEGA AQUÍ LA NUEVA URL QUE GOOGLE TE DIO EN EL PASO 2
-        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbw026CmoR8M1kz14891mA7ctq3760SxyvkBYNzbzl5j5vrtPYTB1KbxjehGWFzr-R0WDQ/exec";
+        // ⚠️ PEGA AQUÍ TU NUEVA URL DEL PASO 1. Si dejas este texto, seguirá saliendo "Failed to fetch".
+        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbxIilyf19uWW08ofteLvAOlWrypkFZzQCqGi_SasGKm9wGbXNYsUyuhPT-DTnuPFOD87w/exec";
 
         fetch(URL_GOOGLE_SCRIPT, {
             method: "POST",
-            // Al no enviar "headers" restrictivos, el navegador lo procesa sin bloqueos CORS
+            // Al no poner 'headers', el celular lo envía en formato seguro (text/plain) evitando bloqueos de seguridad.
             body: JSON.stringify({ fileName: nombreArchivo, fileContent: pdfDataUri })
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "Éxito") {
-                btn.innerText = "✅ Reporte Confirmado en Drive";
+        .then(response => response.text()) // Ahora leemos texto puro, no JSON
+        .then(textoRespuesta => {
+            if (textoRespuesta === "EXITO") {
+                btn.innerText = "✅ Reporte Certificado y Guardado";
                 btn.style.backgroundColor = "#16a34a";
-                alert("Inspección de calzado guardada correctamente en su carpeta de control HSEQ.");
-                setTimeout(() => location.reload(), 4000);
+                alert("Inspección de botas completada. PDF almacenado en la nube corporativa.");
+                setTimeout(() => location.reload(), 3000);
             } else {
-                // Si Drive lo rechaza, ahora sí nos dirá el motivo en la pantalla
-                throw new Error(data.message);
+                throw new Error(textoRespuesta);
             }
         })
         .catch(error => {
-            alert("⚠️ Rechazo del servidor Drive: " + error.message);
+            // Si sale Failed to fetch, ya sabemos que es un problema de conectividad o URL vacía
+            alert("⚠️ " + error.message + " - Revise que pegó correctamente la URL en el código y que tiene señal.");
             btn.innerText = "Reintentar Envío";
             btn.style.backgroundColor = "#dc2626";
             btn.disabled = false;

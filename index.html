@@ -230,27 +230,31 @@
         // 1. DESCARGA FÍSICA EN EL TELÉFONO DEL TRABAJADOR
         doc.save(nombreArchivo);
 
-       // 2. ENVÍO INVISIBLE Y FORZADO AL SERVIDOR DRIVE
+       // 2. ENVÍO DIRECTO Y VISIBLE AL SERVIDOR DRIVE
         const pdfDataUri = doc.output('datauristring');
         
-        // PEGA AQUÍ TU NUEVA URL DEL PASO ANTERIOR
-        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbw3K_XfkMN3F4g4CKclzltWgiEIc6MzImy3md2irOIuw4wl4AfxfdPsDAJGNttK6sQJhg/exec";
+        // PEGA AQUÍ LA NUEVA URL QUE GOOGLE TE DIO EN EL PASO 2
+        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbw026CmoR8M1kz14891mA7ctq3760SxyvkBYNzbzl5j5vrtPYTB1KbxjehGWFzr-R0WDQ/exec";
 
         fetch(URL_GOOGLE_SCRIPT, {
             method: "POST",
-            mode: "no-cors", // Restablecemos el bypass de seguridad
-            headers: { "Content-Type": "text/plain" },
+            // Al no enviar "headers" restrictivos, el navegador lo procesa sin bloqueos CORS
             body: JSON.stringify({ fileName: nombreArchivo, fileContent: pdfDataUri })
         })
-        .then(() => {
-            // Si llega aquí y el script de Drive ya está autorizado, el archivo es un éxito
-            btn.innerText = "✅ Reporte Enviado a SST";
-            btn.style.backgroundColor = "#16a34a";
-            alert("Evidencia fotográfica certificada y alojada en la nube HSEQ.");
-            setTimeout(() => location.reload(), 3000);
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "Éxito") {
+                btn.innerText = "✅ Reporte Confirmado en Drive";
+                btn.style.backgroundColor = "#16a34a";
+                alert("Inspección de calzado guardada correctamente en su carpeta de control HSEQ.");
+                setTimeout(() => location.reload(), 4000);
+            } else {
+                // Si Drive lo rechaza, ahora sí nos dirá el motivo en la pantalla
+                throw new Error(data.message);
+            }
         })
         .catch(error => {
-            alert("⚠️ Error en el dispositivo: Verifique que tiene conexión a internet activa.");
+            alert("⚠️ Rechazo del servidor Drive: " + error.message);
             btn.innerText = "Reintentar Envío";
             btn.style.backgroundColor = "#dc2626";
             btn.disabled = false;

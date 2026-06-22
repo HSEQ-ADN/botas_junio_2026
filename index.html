@@ -230,23 +230,31 @@
         // 1. DESCARGA FÍSICA EN EL TELÉFONO DEL TRABAJADOR
         doc.save(nombreArchivo);
 
-        // 2. ENVÍO INVISIBLE AL SERVIDOR DRIVE (BYPASS DE CORS)
+       // 2. ENVÍO AL SERVIDOR DRIVE (Conexión Limpia)
         const pdfDataUri = doc.output('datauristring');
-        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbw2kspVSjJC0o3xeopQA9R6aZ1CLmjYFj7VV6Od2Pzw1dYn2RZWFHk3pjhtxZ9_KZs-6A/exec";
+        
+        // PEGA AQUÍ TU NUEVA URL QUE ACABAS DE GENERAR EN EL PASO 1
+        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbzoqPNiTH6HLiFvTiU-NI7Woix_I2snyK95Uve_CTWUSiEum4aew_3LEDy5ZCKWRSy_Ng/exec";
 
         fetch(URL_GOOGLE_SCRIPT, {
             method: "POST",
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({ fileName: nombreArchivo, fileContent: pdfDataUri })
         })
-        .then(() => {
-            btn.innerText = "✅ Reporte Enviado Correctamente";
-            btn.style.backgroundColor = "#16a34a";
-            alert("Inspección de botas firmada, descargada en su celular y enviada al servidor de SST.");
-            setTimeout(() => location.reload(), 4000);
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "Éxito") {
+                btn.innerText = "✅ Reporte Guardado en Drive";
+                btn.style.backgroundColor = "#16a34a";
+                alert("¡Perfecto! El PDF de inspección de calzado se ha guardado en la carpeta SST.");
+                setTimeout(() => location.reload(), 3000);
+            } else {
+                throw new Error("Rechazado por el servidor: " + data.message);
+            }
         })
         .catch(error => {
-            alert("⚠️ Error de conexión con el servidor interno. Verifique sus datos móviles.");
+            console.error(error);
+            alert("⚠️ " + error.message);
             btn.innerText = "Reintentar Envío";
             btn.style.backgroundColor = "#dc2626";
             btn.disabled = false;

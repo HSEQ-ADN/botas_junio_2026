@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspección de Botas - Autopistas del Nordeste</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root { --primary: #0f172a; --accent: #2563eb; --success: #16a34a; --danger: #dc2626; --bg: #f1f5f9; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--primary); margin: 0; padding: 10px; padding-bottom: 40px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        .header-corporativo { text-align: center; border: 2px solid #0f172a; padding: 12px; margin-bottom: 20px; border-radius: 6px; }
+        .header-corporativo h1 { margin: 0; font-size: 16px; font-weight: 800; color: #0f172a; }
+        .header-corporativo h2 { margin: 5px 0 0 0; font-size: 13px; color: #475569; }
+        
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        input[readonly] { background-color: #f8fafc; color: #64748b; font-size: 12px; }
+        
+        .section-title { background: var(--primary); color: white; padding: 8px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; margin-top: 20px; margin-bottom: 15px; text-transform: uppercase; }
+        
+        /* Estilos para el cargador de fotos */
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .photo-card { border: 1px dashed #94a3b8; border-radius: 6px; padding: 10px; text-align: center; background: #f8fafc; }
+        .photo-card label { display: block; font-size: 11px; margin-bottom: 8px; color: #334155; }
+        .photo-card input[type="file"] { display: none; }
+        .btn-upload { background: #e2e8f0; color: #0f172a; padding: 8px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; display: block; }
+        .btn-upload.loaded { background: var(--success); color: white; }
+        
+        .signature-container { border: 2px dashed #94a3b8; border-radius: 8px; margin-top: 10px; background: #fff; }
+        canvas { width: 100%; height: 150px; display: block; touch-action: none; }
+        .btn-clear { background: #e2e8f0; color: #475569; border: none; padding: 8px 12px; border-radius: 4px; margin-top: 8px; cursor: pointer; font-size: 12px; font-weight: bold; width: 100%; }
+        
+        .btn-submit { width: 100%; background: var(--accent); color: white; border: none; padding: 16px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 25px; display: block; text-align: center; transition: background 0.3s;}
+    </style>
+</head>
+<body>
+
+<img id="logo-empresa" src="Autopista-del-Nordeste-Logo-Navbar.png" style="display: none;" crossorigin="anonymous">
+
+<div class="container">
+    <div class="header-corporativo">
+        <h1>AUTOPISTAS DEL NORDESTE S.A.S.</h1>
+        <h2>REPORTE FOTOGRÁFICO: ESTADO DE CALZADO DE SEGURIDAD</h2>
+    </div>
+    
+    <div class="form-group"><label>Fecha y Hora del Dispositivo</label><input type="text" id="fecha_hora" readonly></div>
+    <div class="form-group"><label>Nombre del Trabajador</label><input type="text" id="nombre" placeholder="Nombre completo"></div>
+    <div class="form-group"><label>Cédula de Ciudadanía</label><input type="text" id="cedula" placeholder="Número de documento"></div>
+    <div class="form-group"><label>Cargo</label><input type="text" id="cargo" placeholder="Ej. Operador de maquinaria"></div>
+    <div class="form-group"><label>Número de Serie de la Bota (Revisar lengüeta)</label><input type="text" id="serie" placeholder="Obligatorio para trazabilidad de inventario"></div>
+
+    <div class="section-title">Evidencia Fotográfica (Obligatoria)</div>
+    <div class="photo-grid">
+        <div class="photo-card">
+            <label>Parte Superior (Puntera)</label>
+            <label class="btn-upload" id="lbl_foto_sup" for="foto_sup">📷 Tomar Foto</label>
+            <input type="file" id="foto_sup" accept="image/*" capture="environment" onchange="procesarImagen(this, 'foto_sup')">
+        </div>
+        <div class="photo-card">
+            <label>Parte Inferior (Suela)</label>
+            <label class="btn-upload" id="lbl_foto_inf" for="foto_inf">📷 Tomar Foto</label>
+            <input type="file" id="foto_inf" accept="image/*" capture="environment" onchange="procesarImagen(this, 'foto_inf')">
+        </div>
+        <div class="photo-card">
+            <label>Costado Derecho</label>
+            <label class="btn-upload" id="lbl_foto_der" for="foto_der">📷 Tomar Foto</label>
+            <input type="file" id="foto_der" accept="image/*" capture="environment" onchange="procesarImagen(this, 'foto_der')">
+        </div>
+        <div class="photo-card">
+            <label>Costado Izquierdo</label>
+            <label class="btn-upload" id="lbl_foto_izq" for="foto_izq">📷 Tomar Foto</label>
+            <input type="file" id="foto_izq" accept="image/*" capture="environment" onchange="procesarImagen(this, 'foto_izq')">
+        </div>
+    </div>
+
+    <div class="section-title">Detalles de Daño (Opcional)</div>
+    <div class="photo-grid">
+        <div class="photo-card">
+            <label>Foto de Daño 1 (Si aplica)</label>
+            <label class="btn-upload" id="lbl_foto_dano1" for="foto_dano1">📷 Acercamiento</label>
+            <input type="file" id="foto_dano1" accept="image/*" capture="environment" onchange="procesarImagen(this, 'foto_dano1')">
+        </div>
+        <div class="photo-card">
+            <label>Foto de Daño 2 (Si aplica)</label>
+            <label class="btn-upload" id="lbl_foto_dano2" for="foto_dano2">📷 Acercamiento</label>
+            <input type="file" id="foto_dano2" accept="image/*" capture="environment" onchange="procesarImagen(this, 'foto_dano2')">
+        </div>
+    </div>
+
+    <div class="section-title">Firma del Trabajador</div>
+    <p style="font-size: 11px; color: #64748b; margin-top: 0;">Declaro que las fotografías corresponden a mi dotación actual.</p>
+    <div class="signature-container"><canvas id="signature-pad"></canvas></div>
+    <button class="btn-clear" onclick="clearCanvas()">Limpiar Firma</button>
+
+    <button class="btn-submit" id="btn-generar" onclick="generarYEnviarReporte()">Firmar, Descargar y Enviar Reporte</button>
+</div>
+
+<script>
+    // Objeto para almacenar las imágenes comprimidas en Base64
+    const galeria = { foto_sup: null, foto_inf: null, foto_der: null, foto_izq: null, foto_dano1: null, foto_dano2: null };
+
+    window.onload = function() {
+        document.getElementById('fecha_hora').value = new Date().toLocaleString('es-CO');
+    };
+
+    // LÓGICA DE COMPRESIÓN DE IMÁGENES (Vital para que el PDF no pese 30MB)
+    function procesarImagen(input, idGaleria) {
+        if (!input.files || !input.files[0]) return;
+        const archivo = input.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const MAX_WIDTH = 600; // Resolución optimizada para PDF
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+                
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                // Extraer a JPEG con 70% de calidad
+                galeria[idGaleria] = canvas.toDataURL('image/jpeg', 0.7);
+                
+                // Cambiar el estilo del botón para dar retroalimentación visual al usuario
+                const lbl = document.getElementById('lbl_' + idGaleria);
+                lbl.innerText = "✅ Foto Cargada";
+                lbl.classList.add('loaded');
+            }
+            img.src = e.target.result;
+        }
+        reader.readAsDataURL(archivo);
+    }
+
+    // Lógica del Lienzo de Firma
+    const canvas = document.getElementById('signature-pad'); const ctx = canvas.getContext('2d'); let drawing = false;
+    function resize() { canvas.width = canvas.parentElement.clientWidth; canvas.height = 150; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; }
+    window.addEventListener('resize', resize); resize();
+    function getPos(e) { const r = canvas.getBoundingClientRect(); return e.touches ? {x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top} : {x: e.offsetX, y: e.offsetY}; }
+    const start = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); if(e.touches) e.preventDefault(); };
+    const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); if(e.touches) e.preventDefault(); };
+    const end = () => drawing = false;
+    canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); canvas.addEventListener('touchend', end);
+    function clearCanvas() { ctx.clearRect(0,0,canvas.width,canvas.height); }
+
+    function generarYEnviarReporte() {
+        const nombre = document.getElementById('nombre').value.trim();
+        const cedula = document.getElementById('cedula').value.trim();
+        const cargo = document.getElementById('cargo').value.trim();
+        const serie = document.getElementById('serie').value.trim();
+        const fecha = document.getElementById('fecha_hora').value;
+
+        // Validaciones estrictas
+        if (!nombre || !cedula || !cargo || !serie) { alert('⚠️ Debe diligenciar todos los campos de texto, incluyendo la serie de la bota.'); return; }
+        if (!galeria.foto_sup || !galeria.foto_inf || !galeria.foto_der || !galeria.foto_izq) {
+            alert('⚠️ Faltan fotografías obligatorias. Asegúrese de cargar las 4 fotos principales.'); return;
+        }
+
+        const btn = document.getElementById('btn-generar');
+        btn.innerText = "⏳ Procesando Fotografías y Enviando...";
+        btn.style.backgroundColor = "#eab308";
+        btn.disabled = true;
+
+        const { jsPDF } = window.jspdf; 
+        const doc = new jsPDF('p', 'mm', 'letter');
+        
+        try { const logoBase = document.getElementById('logo-empresa'); doc.addImage(logoBase, 'PNG', 14, 10, 42, 16); } catch (e) {}
+
+        // ENCABEZADO Y DATOS
+        doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("AUTOPISTAS DEL NORDESTE S.A.S.", 105, 15, { align: 'center' });
+        doc.setFontSize(11); doc.text("REPORTE DE ESTADO: CALZADO DE SEGURIDAD", 105, 22, { align: 'center' });
+        doc.setLineWidth(0.5); doc.line(14, 30, 200, 30);
+
+        doc.setFontSize(10); 
+        doc.text("FECHA DEL REPORTE:", 14, 40); doc.setFont("helvetica", "normal"); doc.text(fecha, 60, 40);
+        doc.setFont("helvetica", "bold"); doc.text("TRABAJADOR:", 14, 46); doc.setFont("helvetica", "normal"); doc.text(nombre.toUpperCase(), 60, 46);
+        doc.setFont("helvetica", "bold"); doc.text("CÉDULA:", 14, 52); doc.setFont("helvetica", "normal"); doc.text(cedula, 60, 52);
+        doc.setFont("helvetica", "bold"); doc.text("CARGO:", 14, 58); doc.setFont("helvetica", "normal"); doc.text(cargo.toUpperCase(), 60, 58);
+        doc.setFont("helvetica", "bold"); doc.text("SERIE DE DOTACIÓN:", 14, 64); doc.setFont("helvetica", "normal"); doc.text(serie.toUpperCase(), 60, 64);
+
+        // FIRMA (PÁGINA 1)
+        doc.setLineWidth(0.5); doc.line(14, 75, 200, 75);
+        doc.setFont("helvetica", "bold"); doc.text("DECLARACIÓN Y FIRMA:", 14, 85);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+        doc.text("Bajo gravedad de juramento, certifico que las fotografías anexas en este reporte corresponden", 14, 91);
+        doc.text("estrictamente al calzado de seguridad entregado a mi nombre por la empresa.", 14, 96);
+        
+        const firmaData = canvas.toDataURL("image/png"); 
+        doc.addImage(firmaData, 'PNG', 14, 100, 60, 25);
+        doc.line(14, 125, 80, 125);
+        doc.setFont("helvetica", "bold"); doc.text(nombre.toUpperCase(), 14, 130);
+
+        // PÁGINA 2: ANEXO FOTOGRÁFICO MÁSTER
+        doc.addPage();
+        doc.setFontSize(12); doc.text("ANEXO FOTOGRÁFICO (OBLIGATORIO)", 105, 20, { align: 'center' });
+        
+        // Coordenadas para fotos en formato Grid (2x2)
+        doc.setFontSize(10);
+        doc.text("Parte Superior (Puntera):", 14, 30); doc.addImage(galeria.foto_sup, 'JPEG', 14, 33, 85, 85);
+        doc.text("Parte Inferior (Suela):", 110, 30); doc.addImage(galeria.foto_inf, 'JPEG', 110, 33, 85, 85);
+        
+        doc.text("Costado Derecho:", 14, 130); doc.addImage(galeria.foto_der, 'JPEG', 14, 133, 85, 85);
+        doc.text("Costado Izquierdo:", 110, 130); doc.addImage(galeria.foto_izq, 'JPEG', 110, 133, 85, 85);
+
+        // PÁGINA 3: DAÑOS (Solo si las subieron)
+        if (galeria.foto_dano1 || galeria.foto_dano2) {
+            doc.addPage();
+            doc.setFontSize(12); doc.text("ANEXO FOTOGRÁFICO: DETALLES DE DAÑO", 105, 20, { align: 'center' });
+            doc.setFontSize(10);
+            
+            if (galeria.foto_dano1) {
+                doc.text("Detalle de Daño 1:", 14, 30); doc.addImage(galeria.foto_dano1, 'JPEG', 14, 33, 85, 85);
+            }
+            if (galeria.foto_dano2) {
+                let x = galeria.foto_dano1 ? 110 : 14; // Posicionar dependiendo si hay 1 o 2 fotos
+                doc.text("Detalle de Daño 2:", x, 30); doc.addImage(galeria.foto_dano2, 'JPEG', x, 33, 85, 85);
+            }
+        }
+
+        const nombreCortoFecha = fecha.replace(/[\/\s:,]+/g, '-');
+        const nombreArchivo = `INSP-BOTAS_${cedula}_${nombreCortoFecha}.pdf`;
+        
+        // 1. DESCARGA FÍSICA EN EL TELÉFONO DEL TRABAJADOR
+        doc.save(nombreArchivo);
+
+        // 2. ENVÍO INVISIBLE AL SERVIDOR DRIVE (BYPASS DE CORS)
+        const pdfDataUri = doc.output('datauristring');
+        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbzR3cYoacJ9oVvGWAwB6nTGxQeQ8GFkVYjASCpjuxDsOVcyyOiNGA7c1EsCl2JfTVuPtg/exec";
+
+        fetch(URL_GOOGLE_SCRIPT, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ fileName: nombreArchivo, fileContent: pdfDataUri })
+        })
+        .then(() => {
+            btn.innerText = "✅ Reporte Enviado Correctamente";
+            btn.style.backgroundColor = "#16a34a";
+            alert("Inspección de botas firmada, descargada en su celular y enviada al servidor de SST.");
+            setTimeout(() => location.reload(), 4000);
+        })
+        .catch(error => {
+            alert("⚠️ Error de conexión con el servidor interno. Verifique sus datos móviles.");
+            btn.innerText = "Reintentar Envío";
+            btn.style.backgroundColor = "#dc2626";
+            btn.disabled = false;
+        });
+    }
+</script>
+</body>
+</html>

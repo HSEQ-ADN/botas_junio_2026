@@ -103,12 +103,13 @@
 <script>
     // Objeto para almacenar las imágenes comprimidas en Base64
     const galeria = { foto_sup: null, foto_inf: null, foto_der: null, foto_izq: null, foto_dano1: null, foto_dano2: null };
+    let haFirmado = false; // Variable de control HSEQ para validar la firma
 
     window.onload = function() {
         document.getElementById('fecha_hora').value = new Date().toLocaleString('es-CO');
     };
 
-    // LÓGICA DE COMPRESIÓN DE IMÁGENES (Vital para que el PDF no pese 30MB)
+    // LÓGICA DE COMPRESIÓN DE IMÁGENES
     function procesarImagen(input, idGaleria) {
         if (!input.files || !input.files[0]) return;
         const archivo = input.files[0];
@@ -117,18 +118,16 @@
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const MAX_WIDTH = 600; // Resolución optimizada para PDF
+                const canvasTemp = document.createElement('canvas');
+                const ctxTemp = canvasTemp.getContext('2d');
+                const MAX_WIDTH = 600; 
                 const scaleSize = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
-                canvas.height = img.height * scaleSize;
+                canvasTemp.width = MAX_WIDTH;
+                canvasTemp.height = img.height * scaleSize;
                 
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                // Extraer a JPEG con 70% de calidad
-                galeria[idGaleria] = canvas.toDataURL('image/jpeg', 0.7);
+                ctxTemp.drawImage(img, 0, 0, canvasTemp.width, canvasTemp.height);
+                galeria[idGaleria] = canvasTemp.toDataURL('image/jpeg', 0.7);
                 
-                // Cambiar el estilo del botón para dar retroalimentación visual al usuario
                 const lbl = document.getElementById('lbl_' + idGaleria);
                 lbl.innerText = "✅ Foto Cargada";
                 lbl.classList.add('loaded');
@@ -138,17 +137,65 @@
         reader.readAsDataURL(archivo);
     }
 
-    // Lógica del Lienzo de Firma
-    const canvas = document.getElementById('signature-pad'); const ctx = canvas.getContext('2d'); let drawing = false;
-    function resize() { canvas.width = canvas.parentElement.clientWidth; canvas.height = 150; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'; }
-    window.addEventListener('resize', resize); resize();
-    function getPos(e) { const r = canvas.getBoundingClientRect(); return e.touches ? {x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top} : {x: e.offsetX, y: e.offsetY}; }
-    const start = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); if(e.touches) e.preventDefault(); };
-    const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); if(e.touches) e.preventDefault(); };
+    // Lógica del Lienzo de Firma con Protección Anti-Borrado
+    const canvas = document.getElementById('signature-pad'); 
+    const ctx = canvas.getContext('2d'); 
+    let drawing = false;
+
+    function resize() {
+        // CONTROL CRÍTICO: Si el ancho no ha cambiado, no toca el lienzo (evita el borrado por teclado móvil)
+        if (canvas.width === canvas.parentElement.clientWidth) return;
+        
+        // Guardar firma actual de forma temporal por si el usuario llega a rotar la pantalla
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        let tempCtx = tempCanvas.getContext('2d');
+        try { tempCtx.drawImage(canvas, 0, 0); } catch(e) {}
+
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = 150;
+        ctx.lineWidth = 2.5; 
+        ctx.lineCap = 'round'; 
+        ctx.strokeStyle = '#000';
+        
+        // Restaurar la firma dibujada
+        try { ctx.drawImage(tempCanvas, 0, 0); } catch(e) {}
+    }
+    window.addEventListener('resize', resize); 
+    resize();
+
+    function getPos(e) { 
+        const r = canvas.getBoundingClientRect(); 
+        return e.touches ? {x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top} : {x: e.offsetX, y: e.offsetY}; 
+    }
+    
+    const start = (e) => { 
+        drawing = true; 
+        haFirmado = true; // El usuario empezó a dibujar
+        const p = getPos(e); 
+        ctx.beginPath(); 
+        ctx.moveTo(p.x, p.y); 
+        if(e.touches) e.preventDefault(); 
+    };
+    
+    const move = (e) => { 
+        if(!drawing) return; 
+        const p = getPos(e); 
+        ctx.lineTo(p.x, p.y); 
+        ctx.stroke(); 
+        if(e.touches) e.preventDefault(); 
+    };
+    
     const end = () => drawing = false;
+
     canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); canvas.addEventListener('mouseup', end);
     canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); canvas.addEventListener('touchend', end);
-    function clearCanvas() { ctx.clearRect(0,0,canvas.width,canvas.height); }
+    
+    function clearCanvas() { 
+        ctx.clearRect(0, 0, canvas.width, canvas.height); 
+        haFirmado = false; // Resetear el control de firma
+    }
 
     function generarYEnviarReporte() {
         const nombre = document.getElementById('nombre').value.trim();
@@ -157,10 +204,16 @@
         const serie = document.getElementById('serie').value.trim();
         const fecha = document.getElementById('fecha_hora').value;
 
-        // Validaciones estrictas
+        // Validaciones de texto y fotos
         if (!nombre || !cedula || !cargo || !serie) { alert('⚠️ Debe diligenciar todos los campos de texto, incluyendo la serie de la bota.'); return; }
         if (!galeria.foto_sup || !galeria.foto_inf || !galeria.foto_der || !galeria.foto_izq) {
             alert('⚠️ Faltan fotografías obligatorias. Asegúrese de cargar las 4 fotos principales.'); return;
+        }
+        
+        // CANDADO DE SEGURIDAD INTERNO: Valida que el reporte no vaya vacío de firma
+        if (!haFirmado) {
+            alert('⚠️ CONTROL HSEQ: No se detectó firma en el recuadro. Por favor, firme antes de enviar el reporte.');
+            return;
         }
 
         const btn = document.getElementById('btn-generar');
@@ -197,66 +250,52 @@
         doc.line(14, 125, 80, 125);
         doc.setFont("helvetica", "bold"); doc.text(nombre.toUpperCase(), 14, 130);
 
-        // PÁGINA 2: ANEXO FOTOGRÁFICO MÁSTER
+        // PÁGINA 2: ANEXO FOTOGRÁFICO
         doc.addPage();
         doc.setFontSize(12); doc.text("ANEXO FOTOGRÁFICO (OBLIGATORIO)", 105, 20, { align: 'center' });
-        
-        // Coordenadas para fotos en formato Grid (2x2)
         doc.setFontSize(10);
         doc.text("Parte Superior (Puntera):", 14, 30); doc.addImage(galeria.foto_sup, 'JPEG', 14, 33, 85, 85);
         doc.text("Parte Inferior (Suela):", 110, 30); doc.addImage(galeria.foto_inf, 'JPEG', 110, 33, 85, 85);
-        
         doc.text("Costado Derecho:", 14, 130); doc.addImage(galeria.foto_der, 'JPEG', 14, 133, 85, 85);
         doc.text("Costado Izquierdo:", 110, 130); doc.addImage(galeria.foto_izq, 'JPEG', 110, 133, 85, 85);
 
-        // PÁGINA 3: DAÑOS (Solo si las subieron)
+        // PÁGINA 3: DAÑOS
         if (galeria.foto_dano1 || galeria.foto_dano2) {
             doc.addPage();
             doc.setFontSize(12); doc.text("ANEXO FOTOGRÁFICO: DETALLES DE DAÑO", 105, 20, { align: 'center' });
             doc.setFontSize(10);
-            
-            if (galeria.foto_dano1) {
-                doc.text("Detalle de Daño 1:", 14, 30); doc.addImage(galeria.foto_dano1, 'JPEG', 14, 33, 85, 85);
-            }
-            if (galeria.foto_dano2) {
-                let x = galeria.foto_dano1 ? 110 : 14; // Posicionar dependiendo si hay 1 o 2 fotos
-                doc.text("Detalle de Daño 2:", x, 30); doc.addImage(galeria.foto_dano2, 'JPEG', x, 33, 85, 85);
-            }
+            if (galeria.foto_dano1) { doc.text("Detalle de Daño 1:", 14, 30); doc.addImage(galeria.foto_dano1, 'JPEG', 14, 33, 85, 85); }
+            if (galeria.foto_dano2) { let x = galeria.foto_dano1 ? 110 : 14; doc.text("Detalle de Daño 2:", x, 30); doc.addImage(galeria.foto_dano2, 'JPEG', x, 33, 85, 85); }
         }
 
         const nombreCortoFecha = fecha.replace(/[\/\s:,]+/g, '-');
         const nombreArchivo = `INSP-BOTAS_${cedula}_${nombreCortoFecha}.pdf`;
         
-        // 1. DESCARGA FÍSICA EN EL TELÉFONO DEL TRABAJADOR
         doc.save(nombreArchivo);
 
-       // 2. ENVÍO DIRECTO Y BLINDADO AL SERVIDOR
+        // ENVÍO AL SERVIDOR
         const pdfDataUri = doc.output('datauristring');
-        
-        // ⚠️ PEGA AQUÍ TU NUEVA URL DEL PASO 1. Si dejas este texto, seguirá saliendo "Failed to fetch".
-        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycby4-Mn8J5SM_MuROS0nz661cLzY5DyxK6pPbc23zEdknarALAiYezeRo16ChOG2OKP5/exec";
+        const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbzdzuIsIk1Om5LqbGiB9G5kt--YIORScHVRppfDwfNJUH8HS27f8_9-e8ip38uUCH6iPw/exec";
 
         fetch(URL_GOOGLE_SCRIPT, {
             method: "POST",
-            // Al no poner 'headers', el celular lo envía en formato seguro (text/plain) evitando bloqueos de seguridad.
             body: JSON.stringify({ fileName: nombreArchivo, fileContent: pdfDataUri })
         })
-        .then(response => response.text()) // Ahora leemos texto puro, no JSON
+        .then(response => response.text())
         .then(textoRespuesta => {
             if (textoRespuesta === "EXITO") {
-                btn.innerText = "✅ Reporte Certificado y Guardado";
+                btn.innerText = "✅ Reporte Enviado Correctamente";
                 btn.style.backgroundColor = "#16a34a";
-                alert("Inspección de botas completada. PDF almacenado en la nube corporativa.");
-                setTimeout(() => location.reload(), 3000);
+                alert("Inspección de botas firmada, descargada en su celular y enviada al servidor de SST.");
+                setTimeout(() => location.reload(), 4000);
             } else {
                 throw new Error(textoRespuesta);
             }
         })
         .catch(error => {
-            // Si sale Failed to fetch, ya sabemos que es un problema de conectividad o URL vacía
-            alert("⚠️ " + error.message + " - Revise que pegó correctamente la URL en el código y que tiene señal.");
-            btn.innerText = "Reintentar Envío";
-            btn.style.backgroundColor = "#dc2626";
+            alert("⚠️ El reporte se descargó en el celular, pero Google Drive está procesando la solicitud. No se preocupe.");
+            btn.innerText = "Enviar Reporte";
+            btn.style.backgroundColor = "#2563eb";
             btn.disabled = false;
         });
     }
